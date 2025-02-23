@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>バージョン詳細 - {{ version.id }}</title>
+  </head>
+  <body>
+    <h1>バージョン {{ version.id }}</h1>
+    <div class="version-detail">
+      <p>リリース日: {{ version.release_date }}</p>
+      <p>説明: {{ version.description }}</p>
+      <h2>変更点:</h2>
+      <ul>
+        {% for change in version.changes %}
+        <li>{{ change }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <a href="/versions">バージョン一覧に戻る</a>
+  </body>
+</html>
