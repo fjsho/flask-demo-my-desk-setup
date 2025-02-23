@@ -1,21 +1,30 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>バージョン詳細 - {{ version.id }}</title>
+    <meta charset="utf-8" />
+    <title>Version Detail</title>
   </head>
   <body>
-    <h1>バージョン {{ version.id }}</h1>
-    <div class="version-detail">
-      <p>リリース日: {{ version.release_date }}</p>
-      <p>説明: {{ version.description }}</p>
-      <h2>変更点:</h2>
-      <ul>
-        {% for change in version.changes %}
-        <li>{{ change }}</li>
-        {% endfor %}
-      </ul>
-    </div>
-    <a href="/versions">バージョン一覧に戻る</a>
+    <h1>バージョン詳細</h1>
+    <p>ID: {{ version.id }}</p>
+    <p>Name: {{ version.versionName }}</p>
+    <p>Created: {{ version.createdAt }}</p>
+
+    <h2>含まれるアイテム</h2>
+    <ul>
+      {% for it in items %}
+        <li>ID: {{it.id}} | {{it.name}} ({{it.category}})</li>
+      {% endfor %}
+    </ul>
+
+    <h2>アイテム追加</h2>
+    <form action="{{ url_for('add_item_to_version', version_id=version.id) }}" method="POST">
+      <label for="item_id">アイテムID:</label>
+      <input type="number" name="item_id" />
+      <button type="submit">追加</button>
+    </form>
+
+    <hr />
+    <a href="{{ url_for('list_versions') }}">バージョン一覧に戻る</a>
   </body>
 </html>

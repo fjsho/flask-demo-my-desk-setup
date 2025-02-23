@@ -1,20 +1,31 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>アイテム一覧</title>
+    <meta charset="utf-8" />
+    <title>Items</title>
   </head>
   <body>
     <h1>アイテム一覧</h1>
-    <div class="items-container">
+    <ul>
       {% for item in items %}
-      <div class="item">
-        <h2>{{ item.name }}</h2>
-        <p>{{ item.description }}</p>
-        <p>カテゴリ: {{ item.category }}</p>
-      </div>
+        <li>ID: {{ item.id }} | {{ item.name }} ({{ item.category }})</li>
       {% endfor %}
-    </div>
-    <a href="/">戻る</a>
+    </ul>
+
+    <h2>アイテム新規作成</h2>
+    <form action="{{ url_for('create_item') }}" method="POST">
+      <div>
+        <label for="name">名前:</label>
+        <input type="text" name="name" />
+      </div>
+      <div>
+        <label for="category">カテゴリ:</label>
+        <input type="text" name="category" />
+      </div>
+      <button type="submit">作成</button>
+    </form>
+
+    <hr />
+    <a href="{{ url_for('index') }}">戻る</a>
   </body>
 </html>
