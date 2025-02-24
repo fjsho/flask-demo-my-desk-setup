@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Desk Environment - 新規バージョン登録</title>
+  </head>
+  <body>
+    <h1>新しいデスク環境バージョンを登録</h1>
+
+    <form action="{{ url_for('create_version') }}" method="POST">
+      <div>
+        <label for="versionName">バージョン名:</label>
+        <input type="text" name="versionName" required />
+      </div>
+      <button type="submit">登録</button>
+    </form>
+
+    <hr />
+    <p><a href="{{ url_for('index') }}">トップ画面に戻る</a></p>
+  </body>
+</html>

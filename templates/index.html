@@ -1,16 +1,37 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>ホーム</title>
+    <meta charset="utf-8" />
+    <title>Desk Environment - トップ</title>
   </head>
   <body>
-    <h1>ようこそ</h1>
-    <nav>
-      <ul>
-        <li><a href="/items">アイテム一覧</a></li>
-        <li><a href="/versions">バージョン一覧</a></li>
-      </ul>
-    </nav>
+    <h1>Desk Environment Management</h1>
+
+    <!-- デスク環境バージョン一覧 (履歴) -->
+    <h2>デスク環境バージョン一覧</h2>
+    {% if versions %}
+    <ul>
+      {% for v in versions %}
+      <li>
+        <a href="{{ url_for('show_version', version_id=v.id) }}">
+          {{ v.versionName }}
+        </a>
+        ({{ v.createdAt }})
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>まだデスク環境が登録されていません。新規登録を行ってください。</p>
+    {% endif %}
+
+    <!-- 新規登録画面へのボタン -->
+    <p>
+      <a href="{{ url_for('create_version') }}">新規デスク環境登録</a>
+    </p>
+
+    <!-- アイテム一覧画面への導線 -->
+    <p>
+      <a href="{{ url_for('items') }}">アイテム一覧を見る</a>
+    </p>
   </body>
 </html>

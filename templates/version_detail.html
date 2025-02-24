@@ -2,29 +2,52 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Version Detail</title>
+    <title>Desk Environment - バージョン詳細</title>
   </head>
   <body>
     <h1>バージョン詳細</h1>
-    <p>ID: {{ version.id }}</p>
-    <p>Name: {{ version.versionName }}</p>
-    <p>Created: {{ version.createdAt }}</p>
+    <h2>{{ version.versionName }}</h2>
+    <p>作成日時: {{ version.createdAt }}</p>
 
-    <h2>含まれるアイテム</h2>
+    <!-- 登録されているアイテム一覧 -->
+    <h3>このバージョンに含まれるアイテム</h3>
+    {% if version_items %}
     <ul>
-      {% for it in items %}
-        <li>ID: {{it.id}} | {{it.name}} ({{it.category}})</li>
+      {% for it in version_items %}
+      <li>
+        {{ it.name }} ({{ it.category }})
+        <!-- アイテム削除ボタン -->
+        <form
+          action="{{ url_for('remove_item_from_version', version_id=version.id) }}"
+          method="POST"
+          style="display: inline"
+        >
+          <input type="hidden" name="item_id" value="{{ it.id }}" />
+          <button type="submit">削除</button>
+        </form>
+      </li>
       {% endfor %}
     </ul>
+    {% else %}
+    <p>まだアイテムがありません。</p>
+    {% endif %}
 
-    <h2>アイテム追加</h2>
-    <form action="{{ url_for('add_item_to_version', version_id=version.id) }}" method="POST">
-      <label for="item_id">アイテムID:</label>
-      <input type="number" name="item_id" />
+    <!-- アイテム追加フォーム (既存アイテム選択) -->
+    <h3>アイテムを追加</h3>
+    <form
+      action="{{ url_for('add_item_to_version', version_id=version.id) }}"
+      method="POST"
+    >
+      <label for="item_id">追加するアイテム:</label>
+      <select name="item_id">
+        {% for it in all_items %}
+        <option value="{{ it.id }}">{{ it.name }} ({{ it.category }})</option>
+        {% endfor %}
+      </select>
       <button type="submit">追加</button>
     </form>
 
     <hr />
-    <a href="{{ url_for('list_versions') }}">バージョン一覧に戻る</a>
+    <p><a href="{{ url_for('index') }}">トップ画面</a></p>
   </body>
 </html>
