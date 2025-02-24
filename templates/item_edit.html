@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Item Edit</title>
+  </head>
+  <body>
+    <h1>アイテム編集</h1>
+    <form action="{{ url_for('update_item', item_id=item.id) }}" method="POST">
+      <div>
+        <label>名前:</label>
+        <input type="text" name="name" value="{{ item.name }}" />
+      </div>
+      <div>
+        <label>カテゴリ:</label>
+        <input type="text" name="category" value="{{ item.category }}" />
+      </div>
+      <div>
+        <label>商品リンク:</label>
+        <input type="text" name="productLink" value="{{ item.productLink }}" />
+      </div>
+      <button type="submit">更新</button>
+    </form>
+    <p><a href="{{ url_for('items_list') }}">アイテム一覧に戻る</a></p>
+  </body>
+</html>

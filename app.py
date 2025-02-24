@@ -9,174 +9,283 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ITEMS_FILE = os.path.join(SCRIPT_DIR, "items.json")
 VERSIONS_FILE = os.path.join(SCRIPT_DIR, "versions.json")
 
+
+# ---------------------
+# ユーティリティ
+# ---------------------
 def load_json(filepath):
-    """JSONファイルを読み込み、存在しない/破損している場合は空リストを返す。"""
     if not os.path.exists(filepath):
         return []
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
-    except (json.JSONDecodeError, IOError):
+    except:
         return []
 
 def save_json(filepath, data):
-    """JSONファイルに保存する。"""
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def get_next_id(data_list):
-    """リスト中の最大idに+1した値を返す。空なら1を返す。"""
     if not data_list:
         return 1
     return max(item["id"] for item in data_list) + 1
 
-# --------------------------------------------------
-# トップ画面(ホーム)
-# --------------------------------------------------
+
+# ---------------------
+# トップ画面
+# ---------------------
 @app.route("/")
 def index():
-    """
-    トップ画面:
-     - バージョン一覧(デスク環境の履歴)を表示
-     - 新規登録画面への導線
-     - アイテム一覧画面への導線
-    """
+    """トップ画面: バージョン一覧、ボタン類を表示"""
     versions = load_json(VERSIONS_FILE)
-    # 最新が上に来るよう、createdAt 降順でソート (任意)
-    versions_sorted = sorted(versions, key=lambda v: v["createdAt"], reverse=True)
+
+    # ソート例: startPeriod 昇順 → endPeriod 昇順
+    # (要件に合わせて変更可)
+    def sort_key(v):
+        return (v.get("startPeriod", ""), v.get("endPeriod", ""))
+    versions_sorted = sorted(versions, key=sort_key)
+
     return render_template("index.html", versions=versions_sorted)
 
-# --------------------------------------------------
-# デスク環境(バージョン) 新規登録
-# --------------------------------------------------
+# ---------------------
+# デスク環境バージョン 新規登録
+# ---------------------
 @app.route("/version/new", methods=["GET", "POST"])
 def create_version():
-    """
-    新規バージョン登録画面:
-      - GET: フォームを表示
-      - POST: フォーム送信を受け取り、versions.jsonに保存
-    """
+    versions = load_json(VERSIONS_FILE)
+    items = load_json(ITEMS_FILE)
+
+    # 直前のデスク環境を取得 (最後に登録されたversion)
+    last_version = versions[-1] if versions else None
+
     if request.method == "POST":
+        # バージョン情報
         version_name = request.form.get("versionName")
-        # 作成日時は自動付与
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        start_period = request.form.get("startPeriod")
+        end_period = request.form.get("endPeriod")
 
-        versions = load_json(VERSIONS_FILE)
         new_id = get_next_id(versions)
-
-        new_version = {
+        new_ver = {
             "id": new_id,
             "versionName": version_name,
-            "createdAt": now,
-            "items": []  # 登録時点ではまだアイテムを持たない想定
+            "startPeriod": start_period,
+            "endPeriod": end_period,
+            "items": []
         }
 
-        versions.append(new_version)
+        # 既存アイテムのアタッチ (チェックボックス or 複数選択想定)
+        attached_item_ids = request.form.getlist("attach_item_ids")
+        for i_id in attached_item_ids:
+            new_ver["items"].append(int(i_id))
+
+        # アイテム新規登録 → 即アタッチ
+        new_item_name = request.form.get("new_item_name")
+        new_item_cat = request.form.get("new_item_category")
+        new_item_link = request.form.get("new_item_link")
+        if new_item_name:
+            item_id = get_next_id(items)
+            new_item = {
+                "id": item_id,
+                "name": new_item_name,
+                "category": new_item_cat,
+                "productLink": new_item_link
+            }
+            items.append(new_item)
+            # バージョンに即アタッチ
+            new_ver["items"].append(item_id)
+
+        versions.append(new_ver)
         save_json(VERSIONS_FILE, versions)
-        # 登録後はトップ画面or詳細画面に飛ばす
+        save_json(ITEMS_FILE, items)
+
         return redirect(url_for("show_version", version_id=new_id))
 
-    # GET: フォームを表示
-    return render_template("version_new.html")
+    # GETリクエスト時: フォーム表示
+    return render_template("version_new.html", last_version=last_version, items=items)
 
-# --------------------------------------------------
-# バージョン詳細画面
-# --------------------------------------------------
-@app.route("/version/<int:version_id>")
+# ---------------------
+# デスク環境バージョン 詳細 & 更新
+# ---------------------
+@app.route("/version/<int:version_id>", methods=["GET"])
 def show_version(version_id):
-    """
-    バージョン詳細:
-      - バージョン名、作成日時、紐づくアイテム一覧を表示
-      - アイテム追加フォームあり
-    """
     versions = load_json(VERSIONS_FILE)
-    items_all = load_json(ITEMS_FILE)
+    items = load_json(ITEMS_FILE)
 
     version = next((v for v in versions if v["id"] == version_id), None)
-    if version is None:
-        return f"Version ID {version_id} not found.", 404
+    if not version:
+        return "Version not found.", 404
 
-    # バージョンに含まれるアイテムを抽出
-    version_items = [i for i in items_all if i["id"] in version["items"]]
+    # このバージョンに紐づくアイテム
+    attached_items = [i for i in items if i["id"] in version["items"]]
 
     return render_template("version_detail.html",
                            version=version,
-                           version_items=version_items,
-                           all_items=items_all)
+                           attached_items=attached_items,
+                           all_items=items)
+
+@app.route("/version/<int:version_id>/update", methods=["POST"])
+def update_version_info(version_id):
+    """バージョン名, startPeriod, endPeriod の更新"""
+    versions = load_json(VERSIONS_FILE)
+    version = next((v for v in versions if v["id"] == version_id), None)
+    if not version:
+        return "Version not found.", 404
+
+    version["versionName"] = request.form.get("versionName")
+    version["startPeriod"] = request.form.get("startPeriod")
+    version["endPeriod"] = request.form.get("endPeriod")
+
+    save_json(VERSIONS_FILE, versions)
+    return redirect(url_for("show_version", version_id=version_id))
 
 @app.route("/version/<int:version_id>/add_item", methods=["POST"])
 def add_item_to_version(version_id):
-    """
-    バージョンにアイテムをアタッチする。
-    (既存アイテムのIDを選択してPOSTする形)
-    """
-    item_id = int(request.form.get("item_id", 0))
+    """既存アイテム or 新規アイテムをバージョンにアタッチ"""
     versions = load_json(VERSIONS_FILE)
-    items_all = load_json(ITEMS_FILE)
-
+    items = load_json(ITEMS_FILE)
     version = next((v for v in versions if v["id"] == version_id), None)
-    if version is None:
-        return f"Version ID {version_id} not found.", 404
 
-    # 該当アイテムが存在するかチェック
-    item = next((i for i in items_all if i["id"] == item_id), None)
-    if item is None:
-        return f"Item ID {item_id} not found.", 404
+    if not version:
+        return "Version not found.", 404
 
-    # すでに含まれていなければ追加
-    if item_id not in version["items"]:
-        version["items"].append(item_id)
-        save_json(VERSIONS_FILE, versions)
+    # case1: 既存アイテムIDで追加
+    existing_item_id = request.form.get("existing_item_id")
+    if existing_item_id:
+        i_id = int(existing_item_id)
+        if i_id not in version["items"]:
+            version["items"].append(i_id)
+
+    # case2: 新規アイテム -> 即アタッチ
+    new_item_name = request.form.get("new_item_name")
+    if new_item_name:
+        new_item_cat = request.form.get("new_item_category")
+        new_item_link = request.form.get("new_item_link")
+        new_id = get_next_id(items)
+        new_item = {
+            "id": new_id,
+            "name": new_item_name,
+            "category": new_item_cat,
+            "productLink": new_item_link
+        }
+        items.append(new_item)
+        version["items"].append(new_id)
+
+    save_json(VERSIONS_FILE, versions)
+    save_json(ITEMS_FILE, items)
 
     return redirect(url_for("show_version", version_id=version_id))
 
 @app.route("/version/<int:version_id>/remove_item", methods=["POST"])
 def remove_item_from_version(version_id):
-    """
-    バージョンからアイテムをデタッチする。
-    """
-    item_id = int(request.form.get("item_id", 0))
+    """バージョンからアイテムをデタッチ"""
     versions = load_json(VERSIONS_FILE)
-
     version = next((v for v in versions if v["id"] == version_id), None)
-    if version is None:
-        return f"Version ID {version_id} not found.", 404
+    if not version:
+        return "Version not found.", 404
 
+    item_id = int(request.form.get("item_id"))
     if item_id in version["items"]:
         version["items"].remove(item_id)
+
         save_json(VERSIONS_FILE, versions)
+        save_json(VERSIONS_FILE, versions)
+
+    save_json(VERSIONS_FILE, versions)
 
     return redirect(url_for("show_version", version_id=version_id))
 
-# --------------------------------------------------
-# アイテム一覧 (＋新規作成)
-# --------------------------------------------------
+# ---------------------
+# アイテム一覧 (CRUD)
+# ---------------------
 @app.route("/items", methods=["GET", "POST"])
-def items():
-    """
-    GET: アイテム一覧を表示
-    POST: 新規アイテムを登録
-    """
+def items_list():
+    """GET: 一覧表示, POST: 新規アイテム作成"""
     if request.method == "POST":
+        # 新規アイテム作成
         name = request.form.get("name")
         category = request.form.get("category")
-        items_list = load_json(ITEMS_FILE)
-        new_id = get_next_id(items_list)
+        link = request.form.get("productLink")
+
+        items_data = load_json(ITEMS_FILE)
+        new_id = get_next_id(items_data)
         new_item = {
             "id": new_id,
             "name": name,
-            "category": category
+            "category": category,
+            "productLink": link
         }
-        items_list.append(new_item)
-        save_json(ITEMS_FILE, items_list)
-        return redirect(url_for("items"))
+        items_data.append(new_item)
+        save_json(ITEMS_FILE, items_data)
+        return redirect(url_for("items_list"))
 
     # GET: 一覧表示
-    items_list = load_json(ITEMS_FILE)
-    return render_template("items.html", items=items_list)
+    items_data = load_json(ITEMS_FILE)
+    versions = load_json(VERSIONS_FILE)
 
-# --------------------------------------------------
+    # アイテムごとに「使用されているバージョン一覧」を付加
+    def find_versions_for_item(item_id):
+        used_in = []
+        for v in versions:
+            if item_id in v["items"]:
+                used_in.append(v)
+        return used_in
+
+    # each item => which versions?
+    items_with_usage = []
+    for it in items_data:
+        used_in = find_versions_for_item(it["id"])
+        items_with_usage.append({
+            "item": it,
+            "versions": used_in
+        })
+
+    return render_template("items.html", items_with_usage=items_with_usage)
+
+@app.route("/items/<int:item_id>/edit", methods=["GET"])
+def edit_item(item_id):
+    items_data = load_json(ITEMS_FILE)
+    item = next((i for i in items_data if i["id"] == item_id), None)
+    if not item:
+        return "Item not found.", 404
+    return render_template("item_edit.html", item=item)
+
+@app.route("/items/<int:item_id>/update", methods=["POST"])
+def update_item(item_id):
+    items_data = load_json(ITEMS_FILE)
+    item = next((i for i in items_data if i["id"] == item_id), None)
+    if not item:
+        return "Item not found.", 404
+
+    item["name"] = request.form.get("name")
+    item["category"] = request.form.get("category")
+    item["productLink"] = request.form.get("productLink")
+
+    save_json(ITEMS_FILE, items_data)
+    return redirect(url_for("items_list"))
+
+@app.route("/items/<int:item_id>/delete", methods=["POST"])
+def delete_item(item_id):
+    """どのバージョンにも使われていない場合のみ削除"""
+    items_data = load_json(ITEMS_FILE)
+    versions = load_json(VERSIONS_FILE)
+
+    item = next((i for i in items_data if i["id"] == item_id), None)
+    if not item:
+        return "Item not found.", 404
+
+    # 使われているかチェック
+    used = any(item_id in v["items"] for v in versions)
+    if used:
+        return "このアイテムはバージョンで使用中のため削除できません。", 400
+
+    # 削除
+    items_data = [i for i in items_data if i["id"] != item_id]
+    save_json(ITEMS_FILE, items_data)
+    return redirect(url_for("items_list"))
+
+# ---------------------
 # Flask起動
-# --------------------------------------------------
+# ---------------------
 if __name__ == "__main__":
     app.run(debug=True)

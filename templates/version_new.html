@@ -1,21 +1,57 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Desk Environment - 新規バージョン登録</title>
-  </head>
-  <body>
-    <h1>新しいデスク環境バージョンを登録</h1>
+<head><meta charset="utf-8"/><title>New Version</title></head>
+<body>
+  <h1>デスク環境バージョン新規登録</h1>
 
-    <form action="{{ url_for('create_version') }}" method="POST">
+  {% if last_version %}
+    <p>前回登録: {{ last_version.versionName }} ({{ last_version.startPeriod }} ~ {{ last_version.endPeriod }})</p>
+  {% else %}
+    <p>直前バージョンはありません。</p>
+  {% endif %}
+
+  <form method="POST">
+    <div>
+      <label>バージョン名: </label>
+      <input type="text" name="versionName" required/>
+    </div>
+    <div>
+      <label>始期(yyyymm): </label>
+      <input type="text" name="startPeriod" placeholder="202501"/>
+    </div>
+    <div>
+      <label>終期(yyyymm): </label>
+      <input type="text" name="endPeriod" placeholder="202503"/>
+    </div>
+
+    <hr/>
+    <h3>既存アイテムをアタッチ</h3>
+    {% for it in items %}
       <div>
-        <label for="versionName">バージョン名:</label>
-        <input type="text" name="versionName" required />
+        <input type="checkbox" name="attach_item_ids" value="{{ it.id }}"/>
+        {{ it.name }} ({{ it.category }}) - <a href="{{ it.productLink }}">{{ it.productLink }}</a>
       </div>
-      <button type="submit">登録</button>
-    </form>
+    {% endfor %}
 
-    <hr />
-    <p><a href="{{ url_for('index') }}">トップ画面に戻る</a></p>
-  </body>
+    <hr/>
+    <h3>新規アイテムを登録してアタッチ</h3>
+    <div>
+      <label>名前:</label>
+      <input type="text" name="new_item_name" />
+    </div>
+    <div>
+      <label>カテゴリ:</label>
+      <input type="text" name="new_item_category" />
+    </div>
+    <div>
+      <label>商品リンク:</label>
+      <input type="text" name="new_item_link" />
+    </div>
+
+    <hr/>
+    <button type="submit">登録</button>
+  </form>
+
+  <p><a href="{{ url_for('index') }}">トップに戻る</a></p>
+</body>
 </html>

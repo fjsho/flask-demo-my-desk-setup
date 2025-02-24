@@ -1,37 +1,24 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Desk Environment - トップ</title>
-  </head>
-  <body>
-    <h1>Desk Environment Management</h1>
+<head><meta charset="utf-8"/><title>Desk Environment - Top</title></head>
+<body>
+  <h1>Desk Environment Management</h1>
+  <h2>デスク環境バージョン一覧</h2>
 
-    <!-- デスク環境バージョン一覧 (履歴) -->
-    <h2>デスク環境バージョン一覧</h2>
-    {% if versions %}
+  {% if versions %}
     <ul>
       {% for v in versions %}
       <li>
-        <a href="{{ url_for('show_version', version_id=v.id) }}">
-          {{ v.versionName }}
-        </a>
-        ({{ v.createdAt }})
+        <a href="{{ url_for('show_version', version_id=v.id) }}">{{ v.versionName }}</a> 
+        ({{ v.startPeriod }} ~ {{ v.endPeriod }})
       </li>
       {% endfor %}
     </ul>
-    {% else %}
-    <p>まだデスク環境が登録されていません。新規登録を行ってください。</p>
-    {% endif %}
+  {% else %}
+    <p>まだ登録がありません。</p>
+  {% endif %}
 
-    <!-- 新規登録画面へのボタン -->
-    <p>
-      <a href="{{ url_for('create_version') }}">新規デスク環境登録</a>
-    </p>
-
-    <!-- アイテム一覧画面への導線 -->
-    <p>
-      <a href="{{ url_for('items') }}">アイテム一覧を見る</a>
-    </p>
-  </body>
+  <p><a href="{{ url_for('create_version') }}">デスクバージョン新規登録</a></p>
+  <p><a href="{{ url_for('items_list') }}">アイテム一覧</a></p>
+</body>
 </html>

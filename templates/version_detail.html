@@ -2,21 +2,46 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Desk Environment - バージョン詳細</title>
+    <title>Version Detail</title>
   </head>
   <body>
     <h1>バージョン詳細</h1>
-    <h2>{{ version.versionName }}</h2>
-    <p>作成日時: {{ version.createdAt }}</p>
+    <form
+      action="{{ url_for('update_version_info', version_id=version.id) }}"
+      method="POST"
+    >
+      <div>
+        <label>バージョン名:</label>
+        <input
+          type="text"
+          name="versionName"
+          value="{{ version.versionName }}"
+        />
+      </div>
+      <div>
+        <label>始期(yyyymm):</label>
+        <input
+          type="text"
+          name="startPeriod"
+          value="{{ version.startPeriod }}"
+        />
+      </div>
+      <div>
+        <label>終期(yyyymm):</label>
+        <input type="text" name="endPeriod" value="{{ version.endPeriod }}" />
+      </div>
+      <button type="submit">更新</button>
+    </form>
 
-    <!-- 登録されているアイテム一覧 -->
-    <h3>このバージョンに含まれるアイテム</h3>
-    {% if version_items %}
+    <hr />
+    <h2>アイテム一覧</h2>
+    {% if attached_items %}
     <ul>
-      {% for it in version_items %}
+      {% for it in attached_items %}
       <li>
         {{ it.name }} ({{ it.category }})
-        <!-- アイテム削除ボタン -->
+        <a href="{{ it.productLink }}">[link]</a>
+        <!-- デタッチボタン -->
         <form
           action="{{ url_for('remove_item_from_version', version_id=version.id) }}"
           method="POST"
@@ -29,25 +54,40 @@
       {% endfor %}
     </ul>
     {% else %}
-    <p>まだアイテムがありません。</p>
+    <p>アイテムがありません。</p>
     {% endif %}
 
-    <!-- アイテム追加フォーム (既存アイテム選択) -->
-    <h3>アイテムを追加</h3>
+    <hr />
+    <h3>アイテム追加</h3>
     <form
       action="{{ url_for('add_item_to_version', version_id=version.id) }}"
       method="POST"
     >
-      <label for="item_id">追加するアイテム:</label>
-      <select name="item_id">
-        {% for it in all_items %}
-        <option value="{{ it.id }}">{{ it.name }} ({{ it.category }})</option>
-        {% endfor %}
-      </select>
+      <div>
+        <label>既存アイテムを追加:</label>
+        <select name="existing_item_id">
+          <option value="">--選択しない--</option>
+          {% for it in all_items %}
+          <option value="{{ it.id }}">{{ it.name }} ({{ it.category }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <hr />
+      <div>
+        <label>新規アイテム: 名前</label>
+        <input type="text" name="new_item_name" />
+      </div>
+      <div>
+        <label>カテゴリ</label>
+        <input type="text" name="new_item_category" />
+      </div>
+      <div>
+        <label>商品リンク</label>
+        <input type="text" name="new_item_link" />
+      </div>
       <button type="submit">追加</button>
     </form>
 
-    <hr />
-    <p><a href="{{ url_for('index') }}">トップ画面</a></p>
+    <p><a href="{{ url_for('index') }}">トップへ戻る</a></p>
   </body>
 </html>
