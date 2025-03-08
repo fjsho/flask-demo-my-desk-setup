@@ -1,55 +1,80 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"/><title>New Version</title></head>
-<body>
-  <h1>デスク環境バージョン新規登録</h1>
+  <head>
+    <meta charset="utf-8" />
+    <title>New Version</title>
+  </head>
+  <body>
+    <h1>デスク環境バージョン新規登録</h1>
 
-  {% if last_version %}
-    <p>前回登録: {{ last_version.versionName }} ({{ last_version.startPeriod }} ~ {{ last_version.endPeriod }})</p>
-  {% endif %}
+    <!-- 直前バージョンの参照 -->
+    {% if last_version %}
+    <div>
+      <h3>直前のバージョン情報</h3>
+      <ul>
+        <li>バージョン名: {{ last_version.versionName }}</li>
+        <li>始期: {{ last_version.startPeriod | format_date }}</li>
+      </ul>
+    </div>
+    {% else %}
+    <p>まだ登録がありません。</p>
+    {% endif %}
 
-  <form method="POST">
-    <div>
-      <label>バージョン名: </label>
-      <input type="text" name="versionName" required/>
-    </div>
-    <div>
-      <label>始期(yyyy-mm-dd): </label>
-      <input type="date" name="startPeriod" />  <!-- HTML5 date input -->
-    </div>
-    <div>
-      <label>終期(yyyy-mm-dd): </label>
-      <input type="date" name="endPeriod" />
-    </div>
-
-    <hr/>
-    <h3>既存アイテムをアタッチ</h3>
-    {% for it in items %}
+    <form method="POST">
+      <!-- バージョン情報 -->
       <div>
-        <input type="checkbox" name="attach_item_ids" value="{{ it.id }}"/>
-        {{ it.name }} ({{ it.category }}) [<a href="{{ it.productLink }}">link</a>]
+        <label>バージョン名: </label>
+        <input type="text" name="versionName" required />
       </div>
-    {% endfor %}
+      <div>
+        <label>始期: </label>
+        <input type="date" name="startPeriod" required />
+        <!-- HTML5 date input -->
+      </div>
 
-    <hr/>
-    <h3>新規アイテムを登録してアタッチ</h3>
-    <div>
-      <label>名前:</label>
-      <input type="text" name="new_item_name" />
-    </div>
-    <div>
-      <label>カテゴリ:</label>
-      <input type="text" name="new_item_category" />
-    </div>
-    <div>
-      <label>商品リンク:</label>
-      <input type="text" name="new_item_link" />
-    </div>
+      <!-- 既存アイテムのアタッチ -->
+      <hr />
+      <h3>既存アイテムをアタッチ</h3>
+      {% for it in items %}
+      <div>
+        <input
+          type="checkbox"
+          name="attach_item_ids"
+          value="{{ it.id }}"
+          {%
+          if
+          last_version|has_item(it.id)
+          %}checked{%
+          endif
+          %}
+        />
+        {{ it.name }} ({{ it.category }}) {% if it.productLink %} [<a
+          href="{{ it.productLink }}"
+          >link</a
+        >] {% endif %}
+      </div>
+      {% endfor %}
 
-    <hr/>
-    <button type="submit">登録</button>
-  </form>
+      <!-- アイテム新規登録（同時アタッチ） -->
+      <hr />
+      <h3>新規アイテムを登録してアタッチ</h3>
+      <div>
+        <label>アイテム名:</label>
+        <input type="text" name="new_item_name" />
+      </div>
+      <div>
+        <label>カテゴリ:</label>
+        <input type="text" name="new_item_category" />
+      </div>
+      <div>
+        <label>商品リンク:</label>
+        <input type="text" name="new_item_link" />
+      </div>
 
-  <p><a href="{{ url_for('index') }}">トップに戻る</a></p>
-</body>
+      <hr />
+      <button type="submit">登録</button>
+    </form>
+
+    <p><a href="{{ url_for('index') }}">トップに戻る</a></p>
+  </body>
 </html>

@@ -70,23 +70,32 @@ def create_version():
     versions = load_json(VERSIONS_FILE)
     items = load_json(ITEMS_FILE)
 
-    # 直前のデスク環境を取得 (最後に登録されたversion)
-    last_version = versions[-1] if versions else None
+    # 直前のデスク環境を取得
+    last_version = None
+    if versions:
+        # startPeriodで降順ソートして最新を取得
+        last_version = sorted(
+            versions,
+            key=lambda v: v.get("startPeriod", ""),
+            reverse=True
+        )[0]
 
     if request.method == "POST":
         version_name = request.form.get("versionName")
-        start_period = request.form.get("startPeriod")
-        end_period = request.form.get("endPeriod")
+        start_period = request.form.get("startPeriod")  # yyyy-mm-dd形式
 
         new_id = get_next_id(versions)
         new_ver = {
             "id": new_id,
             "versionName": version_name,
             "startPeriod": start_period,
-            "endPeriod": end_period,
             "items": []
         }
 
+        # 直前バージョンの終期を更新
+        if last_version:
+            last_version["endPeriod"] = start_period
+            
         # 既存アイテムのアタッチ
         attached_item_ids = request.form.getlist("attach_item_ids")
         for i_id in attached_item_ids:
@@ -94,9 +103,9 @@ def create_version():
 
         # アイテム新規登録 → 即アタッチ
         new_item_name = request.form.get("new_item_name")
-        new_item_cat = request.form.get("new_item_category")
-        new_item_link = request.form.get("new_item_link")
         if new_item_name:
+            new_item_cat = request.form.get("new_item_category")
+            new_item_link = request.form.get("new_item_link")
             item_id = get_next_id(items)
             new_item = {
                 "id": item_id,
@@ -113,7 +122,6 @@ def create_version():
 
         return redirect(url_for("show_version", version_id=new_id))
 
-    # GETリクエスト時: フォーム表示
     return render_template("version_new.html", last_version=last_version, items=items)
 
 # ---------------------
@@ -316,6 +324,13 @@ def match_date_format(date_str):
         return True
     except (ValueError, TypeError):
         return False
+
+@app.template_filter('has_item')
+def has_item(version, item_id):
+    """バージョンが特定のアイテムIDを持っているかチェック"""
+    if not version:
+        return False
+    return item_id in version.get("items", [])
 
 # ---------------------
 # Flask起動
