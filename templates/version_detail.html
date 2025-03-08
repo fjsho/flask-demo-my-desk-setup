@@ -19,16 +19,16 @@
         />
       </div>
       <div>
-        <label>始期(yyyymm):</label>
+        <label>始期:</label>
         <input
-          type="text"
+          type="date"
           name="startPeriod"
           value="{{ version.startPeriod }}"
         />
       </div>
       <div>
-        <label>終期(yyyymm):</label>
-        <input type="text" name="endPeriod" value="{{ version.endPeriod }}" />
+        <label>終期:</label>
+        <input type="date" name="endPeriod" value="{{ version.endPeriod }}" />
       </div>
       <button type="submit">更新</button>
     </form>
@@ -39,16 +39,16 @@
     <ul>
       {% for it in attached_items %}
       <li>
-        {{ it.name }} ({{ it.category }})
-        <a href="{{ it.productLink }}">[link]</a>
-        <!-- デタッチボタン -->
+        {{ it.name }} ({{ it.category }}) [<a href="{{ it.productLink }}"
+          >商品リンク</a
+        >]
         <form
           action="{{ url_for('remove_item_from_version', version_id=version.id) }}"
           method="POST"
           style="display: inline"
         >
           <input type="hidden" name="item_id" value="{{ it.id }}" />
-          <button type="submit">削除</button>
+          <button type="submit">デタッチ</button>
         </form>
       </li>
       {% endfor %}

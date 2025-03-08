@@ -31,6 +31,17 @@ def get_next_id(data_list):
         return 1
     return max(item["id"] for item in data_list) + 1
 
+def parse_date(date_str):
+    """
+    'yyyy-mm-dd' 形式の文字列を datetime.date に変換。
+    不正値や空文字の場合は None を返す簡易実装。
+    """
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return None
 
 # ---------------------
 # トップ画面
@@ -40,11 +51,15 @@ def index():
     """トップ画面: バージョン一覧、ボタン類を表示"""
     versions = load_json(VERSIONS_FILE)
 
-    # ソート例: startPeriod 昇順 → endPeriod 昇順
-    # (要件に合わせて変更可)
-    def sort_key(v):
-        return (v.get("startPeriod", ""), v.get("endPeriod", ""))
-    versions_sorted = sorted(versions, key=sort_key)
+    # ソート: startPeriod(日付)が早い順 → endPeriod(日付)が早い順
+    # データは文字列だが、正しくソートするには date にパースして比較する
+    def version_sort_key(v):
+        # parse_date で None になる可能性があるので、ソート用に補完
+        sp = parse_date(v.get("startPeriod", "")) or datetime.min.date()
+        ep = parse_date(v.get("endPeriod", "")) or datetime.min.date()
+        return (sp, ep)
+
+    versions_sorted = sorted(versions, key=version_sort_key)
 
     return render_template("index.html", versions=versions_sorted)
 
@@ -60,7 +75,6 @@ def create_version():
     last_version = versions[-1] if versions else None
 
     if request.method == "POST":
-        # バージョン情報
         version_name = request.form.get("versionName")
         start_period = request.form.get("startPeriod")
         end_period = request.form.get("endPeriod")
@@ -74,7 +88,7 @@ def create_version():
             "items": []
         }
 
-        # 既存アイテムのアタッチ (チェックボックス or 複数選択想定)
+        # 既存アイテムのアタッチ
         attached_item_ids = request.form.getlist("attach_item_ids")
         for i_id in attached_item_ids:
             new_ver["items"].append(int(i_id))
@@ -92,7 +106,6 @@ def create_version():
                 "productLink": new_item_link
             }
             items.append(new_item)
-            # バージョンに即アタッチ
             new_ver["items"].append(item_id)
 
         versions.append(new_ver)
@@ -126,7 +139,7 @@ def show_version(version_id):
 
 @app.route("/version/<int:version_id>/update", methods=["POST"])
 def update_version_info(version_id):
-    """バージョン名, startPeriod, endPeriod の更新"""
+    """バージョン名, startPeriod, endPeriod の更新 (yyyy-mm-dd形式)"""
     versions = load_json(VERSIONS_FILE)
     version = next((v for v in versions if v["id"] == version_id), None)
     if not version:
@@ -149,14 +162,14 @@ def add_item_to_version(version_id):
     if not version:
         return "Version not found.", 404
 
-    # case1: 既存アイテムIDで追加
+    # 既存アイテムID
     existing_item_id = request.form.get("existing_item_id")
     if existing_item_id:
         i_id = int(existing_item_id)
         if i_id not in version["items"]:
             version["items"].append(i_id)
 
-    # case2: 新規アイテム -> 即アタッチ
+    # 新規アイテム
     new_item_name = request.form.get("new_item_name")
     if new_item_name:
         new_item_cat = request.form.get("new_item_category")
@@ -202,7 +215,7 @@ def remove_item_from_version(version_id):
 def items_list():
     """GET: 一覧表示, POST: 新規アイテム作成"""
     if request.method == "POST":
-        # 新規アイテム作成
+        # 新規アイテム
         name = request.form.get("name")
         category = request.form.get("category")
         link = request.form.get("productLink")
@@ -223,7 +236,7 @@ def items_list():
     items_data = load_json(ITEMS_FILE)
     versions = load_json(VERSIONS_FILE)
 
-    # アイテムごとに「使用されているバージョン一覧」を付加
+    # アイテムごとに使用されているバージョンを収集
     def find_versions_for_item(item_id):
         used_in = []
         for v in versions:
@@ -231,7 +244,6 @@ def items_list():
                 used_in.append(v)
         return used_in
 
-    # each item => which versions?
     items_with_usage = []
     for it in items_data:
         used_in = find_versions_for_item(it["id"])

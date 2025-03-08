@@ -6,8 +6,6 @@
 
   {% if last_version %}
     <p>前回登録: {{ last_version.versionName }} ({{ last_version.startPeriod }} ~ {{ last_version.endPeriod }})</p>
-  {% else %}
-    <p>直前バージョンはありません。</p>
   {% endif %}
 
   <form method="POST">
@@ -16,12 +14,12 @@
       <input type="text" name="versionName" required/>
     </div>
     <div>
-      <label>始期(yyyymm): </label>
-      <input type="text" name="startPeriod" placeholder="202501"/>
+      <label>始期(yyyy-mm-dd): </label>
+      <input type="date" name="startPeriod" />  <!-- HTML5 date input -->
     </div>
     <div>
-      <label>終期(yyyymm): </label>
-      <input type="text" name="endPeriod" placeholder="202503"/>
+      <label>終期(yyyy-mm-dd): </label>
+      <input type="date" name="endPeriod" />
     </div>
 
     <hr/>
@@ -29,7 +27,7 @@
     {% for it in items %}
       <div>
         <input type="checkbox" name="attach_item_ids" value="{{ it.id }}"/>
-        {{ it.name }} ({{ it.category }}) - <a href="{{ it.productLink }}">{{ it.productLink }}</a>
+        {{ it.name }} ({{ it.category }}) [<a href="{{ it.productLink }}">link</a>]
       </div>
     {% endfor %}
 
