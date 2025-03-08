@@ -1,24 +1,54 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"/><title>Desk Environment - Top</title></head>
-<body>
-  <h1>Desk Environment Management</h1>
-  <h2>デスク環境バージョン一覧</h2>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Desk SetUp Management</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <h1>Desk SetUp Management</h1>
 
-  {% if versions %}
-    <ul>
-      {% for v in versions %}
-      <li>
-        <a href="{{ url_for('show_version', version_id=v.id) }}">{{ v.versionName }}</a> 
-        ({{ v.startPeriod }} ~ {{ v.endPeriod }})
-      </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>まだ登録がありません。</p>
-  {% endif %}
+    <div class="actions">
+      <a href="{{ url_for('create_version') }}" class="button"
+        >デスクバージョン新規登録</a
+      >
+      <a href="{{ url_for('items_list') }}" class="button">アイテム一覧</a>
+    </div>
 
-  <p><a href="{{ url_for('create_version') }}">デスクバージョン新規登録</a></p>
-  <p><a href="{{ url_for('items_list') }}">アイテム一覧</a></p>
-</body>
+    <div class="versions-list">
+      <h2>デスク環境バージョン一覧</h2>
+
+      {% if versions %}
+      <div class="version-cards">
+        {% for version in versions %}
+        <div class="version-card">
+          <h3>
+            <a href="{{ url_for('show_version', version_id=version.id) }}">
+              {{ version.versionName }}
+            </a>
+          </h3>
+          <div class="period">
+            {% if version.get('startPeriod')|match_date_format %}
+            <span class="date"
+              >{{ version.get('startPeriod')|format_date }}</span
+            >
+            {% else %}
+            <span class="error">日付フォーマットエラー</span>
+            {% endif %} 〜 {% if version.get('endPeriod')|match_date_format %}
+            <span class="date">{{ version.get('endPeriod')|format_date }}</span>
+            {% else %}
+            <span class="error">日付フォーマットエラー</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="no-data">まだ登録がありません。</p>
+      {% endif %}
+    </div>
+  </body>
 </html>

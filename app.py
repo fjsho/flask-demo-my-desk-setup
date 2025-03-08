@@ -51,15 +51,14 @@ def index():
     """トップ画面: バージョン一覧、ボタン類を表示"""
     versions = load_json(VERSIONS_FILE)
 
-    # ソート: startPeriod(日付)が早い順 → endPeriod(日付)が早い順
-    # データは文字列だが、正しくソートするには date にパースして比較する
+    # ソート: startPeriod(日付)が新しい順 → endPeriod(日付)が新しい順
     def version_sort_key(v):
         # parse_date で None になる可能性があるので、ソート用に補完
         sp = parse_date(v.get("startPeriod", "")) or datetime.min.date()
         ep = parse_date(v.get("endPeriod", "")) or datetime.min.date()
         return (sp, ep)
 
-    versions_sorted = sorted(versions, key=version_sort_key)
+    versions_sorted = sorted(versions, key=version_sort_key, reverse=True)
 
     return render_template("index.html", versions=versions_sorted)
 
@@ -295,6 +294,28 @@ def delete_item(item_id):
     items_data = [i for i in items_data if i["id"] != item_id]
     save_json(ITEMS_FILE, items_data)
     return redirect(url_for("items_list"))
+
+@app.template_filter('format_date')
+def format_date(date_str):
+    """yyyy-mm-dd形式の日付文字列をyyyy年MM月形式に変換"""
+    if not date_str:  # None や Undefined の場合
+        return ''
+    try:
+        date_obj = datetime.strptime(str(date_str), '%Y-%m-%d')
+        return date_obj.strftime('%Y年%m月')
+    except (ValueError, TypeError):
+        return str(date_str)
+
+@app.template_filter('match_date_format')
+def match_date_format(date_str):
+    """yyyy-mm-dd形式の日付文字列かどうかを判定"""
+    if not date_str:  # None や Undefined の場合
+        return False
+    try:
+        datetime.strptime(str(date_str), '%Y-%m-%d')
+        return True
+    except (ValueError, TypeError):
+        return False
 
 # ---------------------
 # Flask起動
