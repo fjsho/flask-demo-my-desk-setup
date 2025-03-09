@@ -257,10 +257,13 @@ def remove_item_from_version(version_id):
 def items_list():
     """GET: 一覧表示, POST: 新規アイテム作成"""
     if request.method == "POST":
-        # 新規アイテム
+        # 新規アイテム（必須項目のバリデーション）
         name = request.form.get("name")
         category = request.form.get("category")
-        link = request.form.get("productLink")
+        if not name or not category:
+            return "アイテム名とカテゴリは必須です。", 400
+
+        link = request.form.get("productLink", "")  # 任意項目
 
         items_data = load_json(ITEMS_FILE)
         new_id = get_next_id(items_data)
@@ -280,17 +283,29 @@ def items_list():
 
     # アイテムごとに使用されているバージョンを収集
     def find_versions_for_item(item_id):
+        """アイテムが使用されているバージョンを始期降順で取得"""
         used_in = []
         for v in versions:
-            if item_id in v["item_ids"]:
+            if item_id in v.get("item_ids", []):
                 used_in.append(v)
-        return used_in
+        # ここでソート
+        return sorted(
+            used_in,
+            key=lambda x: x.get("startPeriod", ""),
+            reverse=True
+        )
 
+    # カテゴリ別にソートしたアイテムリストを作成
     items_with_usage = []
-    for it in items_data:
-        used_in = find_versions_for_item(it["id"])
+    sorted_items = sorted(
+        items_data,
+        key=lambda x: (x["category"], x["name"])  # カテゴリでグループ化し、名前でソート
+    )
+    
+    for item in sorted_items:
+        used_in = find_versions_for_item(item["id"])
         items_with_usage.append({
-            "item": it,
+            "item": item,
             "versions": used_in
         })
 
@@ -298,6 +313,7 @@ def items_list():
 
 @app.route("/items/<int:item_id>/edit", methods=["GET"])
 def edit_item(item_id):
+    """アイテム編集画面の表示"""
     items_data = load_json(ITEMS_FILE)
     item = next((i for i in items_data if i["id"] == item_id), None)
     if not item:
@@ -306,21 +322,28 @@ def edit_item(item_id):
 
 @app.route("/items/<int:item_id>/update", methods=["POST"])
 def update_item(item_id):
+    """アイテム情報の更新"""
+    # 必須項目のバリデーション
+    name = request.form.get("name")
+    category = request.form.get("category")
+    if not name or not category:
+        return "アイテム名とカテゴリは必須です。", 400
+
     items_data = load_json(ITEMS_FILE)
     item = next((i for i in items_data if i["id"] == item_id), None)
     if not item:
         return "Item not found.", 404
 
-    item["name"] = request.form.get("name")
-    item["category"] = request.form.get("category")
-    item["productLink"] = request.form.get("productLink")
+    item["name"] = name
+    item["category"] = category
+    item["productLink"] = request.form.get("productLink", "")  # 任意項目
 
     save_json(ITEMS_FILE, items_data)
     return redirect(url_for("items_list"))
 
 @app.route("/items/<int:item_id>/delete", methods=["POST"])
 def delete_item(item_id):
-    """どのバージョンにも使われていない場合のみ削除"""
+    """どのバージョンにも使われていない場合のみ削除可能"""
     items_data = load_json(ITEMS_FILE)
     versions = load_json(VERSIONS_FILE)
 

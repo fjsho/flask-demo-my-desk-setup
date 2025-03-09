@@ -1,57 +1,124 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"/><title>Items List</title></head>
-<body>
-  <h1>アイテム一覧</h1>
+  <head>
+    <meta charset="utf-8" />
+    <title>Items List</title>
+    <style>
+      .category-section {
+        margin: 2em 0;
+        padding: 1em;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+      .category-title {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin-bottom: 1em;
+        padding-bottom: 0.5em;
+        border-bottom: 2px solid #dee2e6;
+        color: #343a40;
+      }
+      .item-list {
+        margin-left: 1em;
+      }
+      .item-entry {
+        margin: 1em 0;
+        padding: 0.5em;
+        border-left: 3px solid #dee2e6;
+      }
+      .version-list {
+        margin: 0.5em 0 0.5em 2em;
+        color: #666;
+      }
+      .item-actions {
+        margin-top: 0.5em;
+      }
+      .item-name {
+        font-size: 1.1em;
+        color: #212529;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>アイテム一覧</h1>
 
-  <!-- 新規アイテム登録フォーム -->
-  <h2>アイテム新規登録</h2>
-  <form method="POST">
-    <div>
-      <label>名前:</label>
-      <input type="text" name="name" required/>
-    </div>
-    <div>
-      <label>カテゴリ:</label>
-      <input type="text" name="category" />
-    </div>
-    <div>
-      <label>商品リンク:</label>
-      <input type="text" name="productLink" />
-    </div>
-    <button type="submit">登録</button>
-  </form>
+    <!-- アイテム新規登録フォーム -->
+    <h2>アイテム新規登録</h2>
+    <form method="POST">
+      <div>
+        <label>アイテム名:</label>
+        <input type="text" name="name" required />
+      </div>
+      <div>
+        <label>カテゴリ:</label>
+        <input type="text" name="category" required />
+      </div>
+      <div>
+        <label>商品リンク:</label>
+        <input type="text" name="productLink" />
+        <small>※任意</small>
+      </div>
+      <button type="submit">登録</button>
+    </form>
 
-  <hr/>
-  <h2>登録済みアイテム</h2>
-  {% if items_with_usage %}
-    <ul>
-      {% for data in items_with_usage %}
-        <li>
-          <b>{{ data.item.name }}</b> ({{ data.item.category }})
-          <a href="{{ data.item.productLink }}">[link]</a>
-          <br/>
-          利用バージョン:
-          {% if data.versions %}
+    <hr />
+
+    <!-- アイテム一覧（カテゴリ別） -->
+    <h2>登録済みアイテム</h2>
+    {% if items_with_usage %} {# カテゴリごとにアイテムをグループ化 #} {% set
+    categories = {} %} {% for data in items_with_usage %} {% set category =
+    data.item.category %} {% if category not in categories %} {% set _ =
+    categories.update({category: []}) %} {% endif %} {% set _ =
+    categories[category].append(data) %} {% endfor %} {# カテゴリごとに表示 #}
+    {% for category, items in categories|dictsort %}
+    <section class="category-section">
+      <h3 class="category-title">{{ category }}</h3>
+      <div class="item-list">
+        {% for data in items|sort(attribute='item.name') %}
+        <div class="item-entry">
+          <div class="item-name">
+            {{ data.item.name }} {% if data.item.productLink %} [<a
+              href="{{ data.item.productLink }}"
+              >商品リンク</a
+            >] {% endif %}
+          </div>
+
+          <!-- 使用状況 -->
+          <div class="version-list">
+            利用バージョン: {% if data.versions %}
             <ul>
-            {% for v in data.versions %}
-              <li>{{ v.versionName }} ({{ v.startPeriod }} ~ {{ v.endPeriod }})</li>
-            {% endfor %}
+              {% for version in data.versions %}
+              <li>
+                {{ version.versionName }} ({{
+                version.get('startPeriod')|format_date }} ~ {{
+                version.get('endPeriod')|format_date }})
+              </li>
+              {% endfor %}
             </ul>
-          {% else %}
-            なし
-          {% endif %}
-          <form action="{{ url_for('delete_item', item_id=data.item.id) }}" method="POST" style="display:inline;">
-            <button type="submit">削除</button>
-          </form>
-          <a href="{{ url_for('edit_item', item_id=data.item.id) }}">編集</a>
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>まだアイテムがありません。</p>
-  {% endif %}
+            {% else %} なし {% endif %}
+          </div>
 
-  <p><a href="{{ url_for('index') }}">トップに戻る</a></p>
-</body>
+          <!-- 操作ボタン -->
+          <div class="item-actions">
+            <a href="{{ url_for('edit_item', item_id=data.item.id) }}">編集</a>
+            {% if not data.versions %}
+            <form
+              action="{{ url_for('delete_item', item_id=data.item.id) }}"
+              method="POST"
+              style="display: inline"
+            >
+              <button type="submit">削除</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endfor %} {% else %}
+    <p>まだアイテムがありません。</p>
+    {% endif %}
+
+    <p><a href="{{ url_for('index') }}">トップに戻る</a></p>
+  </body>
 </html>
