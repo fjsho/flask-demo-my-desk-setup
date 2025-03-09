@@ -3,23 +3,56 @@
   <head>
     <meta charset="utf-8" />
     <title>Item Edit</title>
+    <style>
+      .form-group {
+        margin: 1em 0;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5em;
+        font-weight: bold;
+      }
+      .form-group input {
+        padding: 0.5em;
+        width: 100%;
+        max-width: 400px;
+      }
+      .form-group small {
+        color: #666;
+        margin-left: 0.5em;
+      }
+      .actions {
+        margin-top: 2em;
+      }
+      button {
+        padding: 0.5em 2em;
+      }
+    </style>
   </head>
   <body>
     <h1>アイテム編集</h1>
     <form action="{{ url_for('update_item', item_id=item.id) }}" method="POST">
-      <div>
-        <label>名前:</label>
-        <input type="text" name="name" value="{{ item.name }}" />
+      <div class="form-group">
+        <label>アイテム名:</label>
+        <input type="text" name="name" value="{{ item.name }}" required />
       </div>
-      <div>
+      <div class="form-group">
         <label>カテゴリ:</label>
-        <input type="text" name="category" value="{{ item.category }}" />
+        <input
+          type="text"
+          name="category"
+          value="{{ item.category }}"
+          required
+        />
       </div>
-      <div>
+      <div class="form-group">
         <label>商品リンク:</label>
         <input type="text" name="productLink" value="{{ item.productLink }}" />
+        <small>※任意</small>
       </div>
-      <button type="submit">更新</button>
+      <div class="actions">
+        <button type="submit">更新</button>
+      </div>
     </form>
     <p><a href="{{ url_for('items_list') }}">アイテム一覧に戻る</a></p>
   </body>
