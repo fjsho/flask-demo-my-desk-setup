@@ -43,7 +43,11 @@
           value="{{ it.id }}"
           {%
           if
-          last_version|has_item(it.id)
+          last_version
+          and
+          it.id
+          in
+          last_version.item_ids
           %}checked{%
           endif
           %}

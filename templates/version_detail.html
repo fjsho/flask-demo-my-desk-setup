@@ -74,7 +74,7 @@
       <!-- 既存アイテムの追加 -->
       <fieldset>
         <legend>既存アイテムから追加</legend>
-        {% for it in all_items %} {% if it.id not in version.get("items", []) %}
+        {% for it in all_items %} {% if it.id not in version.item_ids %}
         <div>
           <input
             type="checkbox"

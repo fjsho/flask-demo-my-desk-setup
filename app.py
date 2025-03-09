@@ -89,7 +89,7 @@ def create_version():
             "id": new_id,
             "versionName": version_name,
             "startPeriod": start_period,
-            "items": []
+            "item_ids": []
         }
 
         # 直前バージョンの終期を更新
@@ -99,7 +99,7 @@ def create_version():
         # 既存アイテムのアタッチ
         attached_item_ids = request.form.getlist("attach_item_ids")
         for i_id in attached_item_ids:
-            new_ver["items"].append(int(i_id))
+            new_ver["item_ids"].append(int(i_id))
 
         # アイテム新規登録 → 即アタッチ
         new_item_name = request.form.get("new_item_name")
@@ -114,7 +114,7 @@ def create_version():
                 "productLink": new_item_link
             }
             items.append(new_item)
-            new_ver["items"].append(item_id)
+            new_ver["item_ids"].append(item_id)
 
         versions.append(new_ver)
         save_json(VERSIONS_FILE, versions)
@@ -136,11 +136,8 @@ def show_version(version_id):
     if not version:
         return "Version not found.", 404
 
-    # itemsをitem_idsとしてリネーム
-    version["item_ids"] = version.get("items", [])
-
     # このバージョンに紐づくアイテム
-    attached_items = [i for i in items if i["id"] in version["item_ids"]]
+    attached_items = [i for i in items if i["id"] in version.get("item_ids", [])]
 
     # 前後のバージョンを取得
     start_period = version.get("startPeriod", "")
@@ -211,8 +208,8 @@ def add_item_to_version(version_id):
     existing_item_ids = request.form.getlist("existing_item_ids")
     for i_id in existing_item_ids:
         item_id = int(i_id)
-        if item_id not in version["items"]:
-            version["items"].append(item_id)
+        if item_id not in version["item_ids"]:
+            version["item_ids"].append(item_id)
 
     # 新規アイテム
     new_item_name = request.form.get("new_item_name")
@@ -227,7 +224,7 @@ def add_item_to_version(version_id):
             "productLink": new_item_link
         }
         items.append(new_item)
-        version["items"].append(new_id)
+        version["item_ids"].append(new_id)
 
     save_json(VERSIONS_FILE, versions)
     save_json(ITEMS_FILE, items)
@@ -243,8 +240,8 @@ def remove_item_from_version(version_id):
         return "Version not found.", 404
 
     item_id = int(request.form.get("item_id"))
-    if item_id in version["items"]:
-        version["items"].remove(item_id)
+    if item_id in version["item_ids"]:
+        version["item_ids"].remove(item_id)
 
         save_json(VERSIONS_FILE, versions)
         save_json(VERSIONS_FILE, versions)
@@ -285,7 +282,7 @@ def items_list():
     def find_versions_for_item(item_id):
         used_in = []
         for v in versions:
-            if item_id in v["items"]:
+            if item_id in v["item_ids"]:
                 used_in.append(v)
         return used_in
 
@@ -332,7 +329,7 @@ def delete_item(item_id):
         return "Item not found.", 404
 
     # 使われているかチェック
-    used = any(item_id in v["items"] for v in versions)
+    used = any(item_id in v.get("item_ids", []) for v in versions)
     if used:
         return "このアイテムはバージョンで使用中のため削除できません。", 400
 
@@ -368,7 +365,7 @@ def has_item(version, item_id):
     """バージョンが特定のアイテムIDを持っているかチェック"""
     if not version:
         return False
-    return item_id in version.get("items", [])
+    return item_id in version.get("item_ids", [])
 
 # ---------------------
 # Flask起動
