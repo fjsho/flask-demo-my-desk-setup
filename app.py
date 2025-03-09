@@ -136,25 +136,63 @@ def show_version(version_id):
     if not version:
         return "Version not found.", 404
 
+    # itemsをitem_idsとしてリネーム
+    version["item_ids"] = version.get("items", [])
+
     # このバージョンに紐づくアイテム
-    attached_items = [i for i in items if i["id"] in version["items"]]
+    attached_items = [i for i in items if i["id"] in version["item_ids"]]
+
+    # 前後のバージョンを取得
+    start_period = version.get("startPeriod", "")
+    prev_version = next(
+        (v for v in sorted(
+            versions,
+            key=lambda x: x.get("startPeriod", ""),
+            reverse=True
+        ) if v.get("startPeriod", "") < start_period),
+        None
+    )
+    next_version = next(
+        (v for v in sorted(
+            versions,
+            key=lambda x: x.get("startPeriod", "")
+        ) if v.get("startPeriod", "") > start_period),
+        None
+    )
 
     return render_template("version_detail.html",
-                           version=version,
-                           attached_items=attached_items,
-                           all_items=items)
+                         version=version,
+                         attached_items=attached_items,
+                         all_items=items,
+                         prev_version=prev_version,
+                         next_version=next_version)
 
 @app.route("/version/<int:version_id>/update", methods=["POST"])
 def update_version_info(version_id):
-    """バージョン名, startPeriod, endPeriod の更新 (yyyy-mm-dd形式)"""
+    """バージョン名, startPeriodの更新"""
     versions = load_json(VERSIONS_FILE)
+    
+    # 更新対象のバージョンを取得
     version = next((v for v in versions if v["id"] == version_id), None)
     if not version:
         return "Version not found.", 404
 
+    # 直前のバージョンを取得
+    old_start = version.get("startPeriod", "")
+    prev_version = next(
+        (v for v in versions 
+         if v.get("endPeriod", "") == old_start),
+        None
+    )
+
+    # バージョン情報を更新
+    new_start = request.form.get("startPeriod")
     version["versionName"] = request.form.get("versionName")
-    version["startPeriod"] = request.form.get("startPeriod")
-    version["endPeriod"] = request.form.get("endPeriod")
+    version["startPeriod"] = new_start
+
+    # 直前バージョンの終期を更新
+    if prev_version:
+        prev_version["endPeriod"] = new_start
 
     save_json(VERSIONS_FILE, versions)
     return redirect(url_for("show_version", version_id=version_id))
@@ -169,12 +207,12 @@ def add_item_to_version(version_id):
     if not version:
         return "Version not found.", 404
 
-    # 既存アイテムID
-    existing_item_id = request.form.get("existing_item_id")
-    if existing_item_id:
-        i_id = int(existing_item_id)
-        if i_id not in version["items"]:
-            version["items"].append(i_id)
+    # 既存アイテムID（複数可）
+    existing_item_ids = request.form.getlist("existing_item_ids")
+    for i_id in existing_item_ids:
+        item_id = int(i_id)
+        if item_id not in version["items"]:
+            version["items"].append(item_id)
 
     # 新規アイテム
     new_item_name = request.form.get("new_item_name")

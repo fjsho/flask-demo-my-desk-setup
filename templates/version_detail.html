@@ -6,6 +6,8 @@
   </head>
   <body>
     <h1>バージョン詳細</h1>
+
+    <!-- バージョン情報 -->
     <form
       action="{{ url_for('update_version_info', version_id=version.id) }}"
       method="POST"
@@ -16,6 +18,7 @@
           type="text"
           name="versionName"
           value="{{ version.versionName }}"
+          required
         />
       </div>
       <div>
@@ -24,31 +27,35 @@
           type="date"
           name="startPeriod"
           value="{{ version.startPeriod }}"
+          required
         />
       </div>
       <div>
         <label>終期:</label>
-        <input type="date" name="endPeriod" value="{{ version.endPeriod }}" />
+        <input type="date" value="{{ version.endPeriod }}" disabled />
+        <small>※次のバージョンの始期により自動設定されます</small>
       </div>
       <button type="submit">更新</button>
     </form>
 
+    <!-- 紐づくアイテム一覧 -->
     <hr />
     <h2>アイテム一覧</h2>
     {% if attached_items %}
     <ul>
       {% for it in attached_items %}
       <li>
-        {{ it.name }} ({{ it.category }}) [<a href="{{ it.productLink }}"
+        {{ it.name }} ({{ it.category }}) {% if it.productLink %} [<a
+          href="{{ it.productLink }}"
           >商品リンク</a
-        >]
+        >] {% endif %}
         <form
           action="{{ url_for('remove_item_from_version', version_id=version.id) }}"
           method="POST"
           style="display: inline"
         >
           <input type="hidden" name="item_id" value="{{ it.id }}" />
-          <button type="submit">デタッチ</button>
+          <button type="submit">削除</button>
         </form>
       </li>
       {% endfor %}
@@ -57,36 +64,67 @@
     <p>アイテムがありません。</p>
     {% endif %}
 
+    <!-- アイテム追加 -->
     <hr />
     <h3>アイテム追加</h3>
     <form
       action="{{ url_for('add_item_to_version', version_id=version.id) }}"
       method="POST"
     >
-      <div>
-        <label>既存アイテムを追加:</label>
-        <select name="existing_item_id">
-          <option value="">--選択しない--</option>
-          {% for it in all_items %}
-          <option value="{{ it.id }}">{{ it.name }} ({{ it.category }})</option>
-          {% endfor %}
-        </select>
-      </div>
-      <hr />
-      <div>
-        <label>新規アイテム: 名前</label>
-        <input type="text" name="new_item_name" />
-      </div>
-      <div>
-        <label>カテゴリ</label>
-        <input type="text" name="new_item_category" />
-      </div>
-      <div>
-        <label>商品リンク</label>
-        <input type="text" name="new_item_link" />
-      </div>
+      <!-- 既存アイテムの追加 -->
+      <fieldset>
+        <legend>既存アイテムから追加</legend>
+        {% for it in all_items %} {% if it.id not in version.get("items", []) %}
+        <div>
+          <input
+            type="checkbox"
+            name="existing_item_ids"
+            value="{{ it.id }}"
+            id="item_{{ it.id }}"
+          />
+          <label for="item_{{ it.id }}">
+            {{ it.name }} ({{ it.category }}) {% if it.productLink %} [<a
+              href="{{ it.productLink }}"
+              >商品リンク</a
+            >] {% endif %}
+          </label>
+        </div>
+        {% endif %} {% endfor %}
+      </fieldset>
+
+      <!-- 新規アイテムの追加 -->
+      <fieldset>
+        <legend>新規アイテムを登録</legend>
+        <div>
+          <label>アイテム名:</label>
+          <input type="text" name="new_item_name" />
+        </div>
+        <div>
+          <label>カテゴリ:</label>
+          <input type="text" name="new_item_category" />
+        </div>
+        <div>
+          <label>商品リンク:</label>
+          <input type="text" name="new_item_link" />
+        </div>
+      </fieldset>
+
       <button type="submit">追加</button>
     </form>
+
+    <!-- 前後のバージョンへのリンク -->
+    <hr />
+    <div>
+      {% if prev_version %}
+      <a href="{{ url_for('show_version', version_id=prev_version.id) }}">
+        ← {{ prev_version.versionName }}
+      </a>
+      {% endif %} {% if next_version %}
+      <a href="{{ url_for('show_version', version_id=next_version.id) }}">
+        {{ next_version.versionName }} →
+      </a>
+      {% endif %}
+    </div>
 
     <p><a href="{{ url_for('index') }}">トップへ戻る</a></p>
   </body>
