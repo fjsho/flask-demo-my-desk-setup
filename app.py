@@ -43,6 +43,26 @@ def parse_date(date_str):
     except ValueError:
         return None
 
+def validate_period(start_period, end_period=None):
+    """期間のバリデーション
+    
+    Args:
+        start_period: 始期（yyyy-mm-dd形式）
+        end_period: 終期（yyyy-mm-dd形式、Noneの場合はチェックしない）
+    
+    Returns:
+        (bool, str): (有効かどうか, エラーメッセージ)
+    """
+    try:
+        start_date = datetime.strptime(start_period, '%Y-%m-%d')
+        if end_period:
+            end_date = datetime.strptime(end_period, '%Y-%m-%d')
+            if start_date > end_date:
+                return False, "始期は終期より前の日付を指定してください。"
+        return True, ""
+    except ValueError:
+        return False, "日付はyyyy-mm-dd形式で入力してください。"
+
 # ---------------------
 # トップ画面
 # ---------------------
@@ -83,6 +103,12 @@ def create_version():
     if request.method == "POST":
         version_name = request.form.get("versionName")
         start_period = request.form.get("startPeriod")  # yyyy-mm-dd形式
+
+        # 直前バージョンの終期との整合性チェック
+        if last_version and last_version.get("endPeriod"):
+            is_valid, error_msg = validate_period(start_period, last_version.get("endPeriod"))
+            if not is_valid:
+                return error_msg, 400
 
         new_id = get_next_id(versions)
         new_ver = {
@@ -181,8 +207,12 @@ def update_version_info(version_id):
     
     # 始期が変更された場合
     if new_start_period and new_start_period != old_start_period:
-        version["startPeriod"] = new_start_period
-        
+        # 自身の終期との整合性チェック
+        if version.get("endPeriod"):
+            is_valid, error_msg = validate_period(new_start_period, version.get("endPeriod"))
+            if not is_valid:
+                return error_msg, 400
+
         # 全バージョンを始期でソート
         sorted_versions = sorted(
             versions,
@@ -190,15 +220,33 @@ def update_version_info(version_id):
             reverse=True
         )
         
-        # 直前のバージョンを探す（現在のバージョンより前で最も近いもの）
+        # 前後のバージョンを取得
+        next_version = next(
+            (v for v in sorted_versions 
+             if v.get("startPeriod", "") > new_start_period 
+             and v["id"] != version_id),
+            None
+        )
         prev_version = next(
             (v for v in sorted_versions 
              if v.get("startPeriod", "") < new_start_period 
-             and v["id"] != version_id),  # 自分自身は除外
+             and v["id"] != version_id),
             None
         )
-        
-        # 直前のバージョンが存在する場合、その終期を更新
+
+        # 前後のバージョンとの整合性チェック
+        if next_version and next_version.get("startPeriod"):
+            is_valid, error_msg = validate_period(new_start_period, next_version.get("startPeriod"))
+            if not is_valid:
+                return error_msg, 400
+
+        if prev_version and prev_version.get("endPeriod"):
+            is_valid, error_msg = validate_period(prev_version.get("endPeriod"), new_start_period)
+            if not is_valid:
+                return "直前のバージョンの終期より後の日付を指定してください。", 400
+
+        # バリデーションOKなら更新
+        version["startPeriod"] = new_start_period
         if prev_version:
             prev_version["endPeriod"] = new_start_period
     
