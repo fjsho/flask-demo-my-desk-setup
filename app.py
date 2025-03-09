@@ -166,31 +166,42 @@ def show_version(version_id):
 
 @app.route("/version/<int:version_id>/update", methods=["POST"])
 def update_version_info(version_id):
-    """バージョン名, startPeriodの更新"""
+    """バージョン情報の更新"""
     versions = load_json(VERSIONS_FILE)
-    
-    # 更新対象のバージョンを取得
     version = next((v for v in versions if v["id"] == version_id), None)
     if not version:
         return "Version not found.", 404
 
-    # 直前のバージョンを取得
-    old_start = version.get("startPeriod", "")
-    prev_version = next(
-        (v for v in versions 
-         if v.get("endPeriod", "") == old_start),
-        None
-    )
-
-    # バージョン情報を更新
-    new_start = request.form.get("startPeriod")
+    # 更新前の始期を保持
+    old_start_period = version.get("startPeriod")
+    
+    # フォームからの入力を取得
     version["versionName"] = request.form.get("versionName")
-    version["startPeriod"] = new_start
-
-    # 直前バージョンの終期を更新
-    if prev_version:
-        prev_version["endPeriod"] = new_start
-
+    new_start_period = request.form.get("startPeriod")  # yyyy-mm-dd形式
+    
+    # 始期が変更された場合
+    if new_start_period and new_start_period != old_start_period:
+        version["startPeriod"] = new_start_period
+        
+        # 全バージョンを始期でソート
+        sorted_versions = sorted(
+            versions,
+            key=lambda x: x.get("startPeriod", ""),
+            reverse=True
+        )
+        
+        # 直前のバージョンを探す（現在のバージョンより前で最も近いもの）
+        prev_version = next(
+            (v for v in sorted_versions 
+             if v.get("startPeriod", "") < new_start_period 
+             and v["id"] != version_id),  # 自分自身は除外
+            None
+        )
+        
+        # 直前のバージョンが存在する場合、その終期を更新
+        if prev_version:
+            prev_version["endPeriod"] = new_start_period
+    
     save_json(VERSIONS_FILE, versions)
     return redirect(url_for("show_version", version_id=version_id))
 
